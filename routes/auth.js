@@ -12,7 +12,7 @@ router.route('/registration').get(controller.getRegistrationView).post([
     //     if(value !== req.body.password) throw new Error("Password confirmation doesn't match password")
     // }),
     
-    check('email' , 'Please provide valid email').isEmail().normalizeEmail()
+    check('email' , 'Please provide valid email').isEmail()
 ],controller.registration);
 
 router.route('/login').get(controller.getLoginView).post(controller.login);

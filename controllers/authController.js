@@ -16,7 +16,7 @@ const generateAccessToken = (id , roles) => {
     return jwt.sign(payload , secret , {expiresIn:"24h"} );
 }
 
-class authController{
+class AuthController{
 
     getRegistrationView(req,res){
         res.send('hi from auth controller get registration veiw');
@@ -31,7 +31,7 @@ class authController{
             }
 
 
-            const {username , password} = req.body;
+            const {username , password , email} = req.body;
 
             const candidate = await User.findOne({username});
 
@@ -44,7 +44,7 @@ class authController{
             
             const userRole = await Role.findOne({value:"Admin"});
             
-            const user = new User({username: username , password:hashedPassword ,roles: [userRole.value] });
+            const user = new User({username: username , password:hashedPassword ,email:email , roles: [userRole.value] });
 
             await user.save();
 
@@ -109,4 +109,4 @@ class authController{
     }
 }
 
-module.exports = new authController();
+module.exports = new AuthController();
