@@ -12,7 +12,7 @@ class SocketHandler  {
 
             const game = await Game.findById(roomId);
             const maxPlayers = game.get('participantMaxAmount');
-            const currentPlayerCount = game.get('participants').length-1;
+            const currentPlayerCount = game.get('participants').length;
             
             
             //not tested
@@ -24,7 +24,7 @@ class SocketHandler  {
             //not tested
 
 
-            if(currentPlayerCount>maxPlayers){
+            if(currentPlayerCount>=maxPlayers){
                 socket.emit('participant max amount reached' , 'use this on client to reject user');
                 throw new Error('max limit reached');
             }

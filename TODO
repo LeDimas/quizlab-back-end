@@ -2,3 +2,6 @@
 2.Add some middleware
 3.Finish quiz result summation in sockets and assignin results to participants
 4.Lastly,add payment system,least important
+
+
+note for myself - gameId is equal to roomId
