@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const {Quiz} = require('../models/Quiz');
 const authMiddleware = require('../middleware/authMiddleware');
 const controller = require('../controllers/quizController');
 
@@ -21,6 +22,8 @@ const controller = require('../controllers/quizController');
 router.put('/quiz/:quizId' , authMiddleware , controller.updateQuiz)
 
 
+
+
 //TODO ВПАЯТЬ СОКЕТЫ
 router.put('/quiz/:quizId/question/:questionId' , authMiddleware , controller.updateQuestion)
 
@@ -29,12 +32,6 @@ router.put('/quiz/:quizId/question/:questionId' , authMiddleware , controller.up
 /**
  * =============================PUT/UPDATE SECTION END================================
  */
-
-
-
-
-
-
 
 
 /**
@@ -59,8 +56,6 @@ router.get('/quiz/:quizId/question/:questionId' ,controller.getQuestionFromQuizB
  */
 
 
-
-
 /**
  * =========================POST SECTION=============================    
  */
@@ -79,13 +74,6 @@ router.post('/quiz/:quizId/question' ,controller.createQuestion);
 /**
  * ============================= POST SECTIOND END =================================
  */
-
-
-
-
-
-
-
 
 
 /**

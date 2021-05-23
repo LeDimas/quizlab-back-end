@@ -1,0 +1,4 @@
+1.Change querying from usernameId on username from JWT (must be provided from browser agent(front-end))
+2.Add some middleware
+3.Finish quiz result summation in sockets and assignin results to participants
+4.Lastly,add payment system,least important

@@ -7,6 +7,7 @@ class QuizController {
         try {
             const user_id = req.user.id;
             const quizes = await Quiz.find({author:user_id});
+            
     
             const length = quizes.length;
             
@@ -101,7 +102,7 @@ class QuizController {
     async createQuiz(req,res){
         try {
 
-            const {name , description ,_id} = req.body;
+            const {name , description } = req.body;
             const user_id = req.user.id;
             
             const quizToCreate = await Quiz.create({
@@ -132,6 +133,7 @@ class QuizController {
             if(!quiz)
             return res.status(400).json({"error":"no quiz with given id found"});
             
+            //remove quiz id in further
             const questionObj = {
                 description:description,
                 alternatives:alternatives,
@@ -142,7 +144,7 @@ class QuizController {
             
             await quiz.questions.push(question);
             
-            const result = await quiz.save();
+            await quiz.save();
             
             return res.status(200).json(quiz);
             

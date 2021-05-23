@@ -25,6 +25,7 @@ const questionSchema = new Schema({
         }
     ] , 
      
+    //Remove in further
     quiz:{
         type: Schema.Types.ObjectId,
         required:true

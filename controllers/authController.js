@@ -22,6 +22,10 @@ class AuthController{
         res.send('hi from auth controller get registration veiw');
     }
 
+    async initRoles(req,res){
+
+    }
+
     async registration(req,res){
         try {
 
@@ -42,7 +46,12 @@ class AuthController{
             //Store hash as password
             const hashedPassword = bcrypt.hashSync(password, 7);
             
-            const userRole = await Role.findOne({value:"Admin"});
+            //TODO make dynamic
+            let userRole = await Role.findOne({value:"User"});
+
+            if(!userRole){
+                userRole = await Role.create({value : "User"});
+            }
             
             const user = new User({username: username , password:hashedPassword ,email:email , roles: [userRole.value] });
 
