@@ -123,10 +123,10 @@ class SocketHandler  {
             from:"users",
             localField:"userId",
             foreignField:"_id",
-            as:"megaResult"
+            as:"result"
         })
-        .unwind("megaResult")
-        .group({_id:{name:"$megaResult.username" , gameId:"$gameId" }});
+        .unwind("result")
+        .group({_id:{name:"$result.username" , gameId:"$gameId" }});
 
         // console.log(userGameIdData);
         return userGameIdData[0]._id;
