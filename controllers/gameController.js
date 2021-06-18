@@ -49,14 +49,33 @@ class GameController {
         const gameId = req.params.gameId;
         const game = await Game.findOne({"_id":gameId}).populate({path:'participants' , populate:{path:'userId'}});
 
-        return res.status(200).json(game);
-         
+        // return res.status(200).json(game);
+        res.render('enter_room' , {layout:'index'});
     
         } catch (e) {
             console.log(e);
             return res.status(500).json({"error":e});
         }
 
+    }
+
+    async assignGameResults(roomId){
+        try {
+            const aggregationResult =  await Participant.where({gameId:roomId})
+            .sort({correctAnwsers:-1 , timeResultInSeconds:1});
+            let placeInc = 0;
+
+            aggregationResult.forEach(element => {
+                placeInc++;
+                Participant.findOneAndUpdate({'userId':mongoose.Types.ObjectId(element.userId)} ,
+                {$set:{'place':placeInc}}).then((doc)=>doc.save());
+                
+            });
+
+
+        } catch (error) {
+            console.log(error);
+        }
     }
     
     async createGame(req , res){

@@ -1,10 +1,13 @@
 // const {Quiz , Question} = require('../models/Quiz');
-// const Game = require('../models/QGame');
+const Game = require('../models/QGame');
+const User = require('../models/User');
 // const Participant = require('../models/Participant');
 const authMiddleware = require('../middleware/authMiddleware');
 const ownerMiddleware = require('../middleware/ownerMiddleware');
 const router = require('express').Router();
-const controller = require('../controllers/gameController')
+const mongoose = require('mongoose');
+const controller = require('../controllers/gameController');
+const Participant = require('../models/Participant');
 
 
 
@@ -12,10 +15,10 @@ const controller = require('../controllers/gameController')
 
 
 //add middleware
-router.get('/joinGame/:gameId', authMiddleware   , controller.joinGameGet)
+router.get('/joinGame/:gameId',  controller.joinGameGet)
 
 
-router.post('/joinGame/:gameId', authMiddleware  , controller.joinGamePost)
+router.post('/joinGame/:gameId', controller.joinGamePost)
 
 //#region toDelete
 
@@ -140,6 +143,68 @@ router.post('/technicalGetQuestion/:quizName', async (req,res)=>{
         res.status(400).json({message:"bad request"});
     }
 
+
+})
+
+router.get('/technicalGetParticipantFinishedCount' , async (req,res)=>{
+ 
+
+    try {
+
+      
+
+        
+
+
+        // const aggregationResult = await Participant.aggregate([
+        //     {$match:{gameId :'60a6da09b479713ba49fcee9'}}
+        // ])
+        // .sort({correctAnwsers:-1 , timeResultInSeconds:1})
+        // .project({'correctAnwsers':1,'timeResultInSeconds':1 , 'userId':1 , 'place':1})
+        // .lookup({
+        //     from:"users",
+        //     localField:'userId',
+        //     foreignField:'_id',
+        //     as:'thisGameUser'
+        // })
+        // .project({
+        //     'correctAnwsers':1,'timeResultInSeconds':1 , 'userId':1 , 'place':1,
+        //     'thisGameUser.username':1
+        // });
+
+        
+
+
+        // let scoreBoard = {};
+        // aggregationResult.forEach(part =>{
+        //     console.log(part);
+        // })
+
+        // const aggregationResult = await Game.aggregate([
+        //     {$match:{_id : mongoose.Types.ObjectId('60a6da09b479713ba49fcee9')}}
+        // ])
+        // .lookup({
+        //     from:"participants",
+        //     localField:'participants',
+        //     foreignField:'_id',
+        //     as:'thisGameParticipants'
+        // })
+        // .project({
+     
+        //     'thisGameParticipants._id':1,
+        //     'thisGameParticipants.correctAnwsers':1,
+        //     'thisGameParticipants.timeResultInSeconds':1,
+        //     'thisGameParticipants.userId':1
+        // })
+        // .sort({'thisGameParticipants.timeResultInSeconds':1});
+
+        res.status(200).json(aggregationResult);
+    } catch (error) {
+        console.log(error);
+    }
+
+
+       
 
 })
 //#endregion

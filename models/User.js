@@ -8,6 +8,9 @@ const UserSchema = new Schema({
     roles: [{type: String , ref: 'Role'}]
     // hash: String, salt: String
     
+    //implement rating?
+    // rating:{type:Number, unique:true , required:true}
+    
 });
 
 
