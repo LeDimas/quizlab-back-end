@@ -123,13 +123,13 @@ class SocketHandler  {
             from:"users",
             localField:"userId",
             foreignField:"_id",
-            as:"megaResult"
+            as:"result"
         })
-        .unwind("megaResult")
-        .group({_id:{name:"$megaResult.username" , gameId:"$gameId" }});
+        .unwind("result")
+        .group({_id:{name:"$result.username" , gameId:"$gameId" }});
 
-        // console.log(userGameIdData);
-        return userGameIdData[0]._id;
+
+        return userGameIdData[0]._id.gameId;
 
         } catch (error) {
             console.log(error);
@@ -143,6 +143,8 @@ class SocketHandler  {
             Game.findOneAndUpdate({"quiz":quiz._id} , {$set:{"isStarted":true}})
         })
         //not tested yet
+
+        console.log('get questions triggered');
 
         const questions = await Quiz.aggregate([
             {$match:{name:quizName}}
@@ -166,12 +168,37 @@ class SocketHandler  {
         
         }
 
-       
+        async checkWhetherAllFinished(roomId){
+            try {
+                const aggregationResult = await Game.aggregate([
+                    {$match:{_id : mongoose.Types.ObjectId(roomId)}}
+                ])
+                .lookup({
+                    from:"participants",
+                    localField:'participants',
+                    foreignField:'_id',
+                    as:'thisGameParticipants'
+                })
+                .project({
+                    "thisGameParticipants._id":1,
+                    "thisGameParticipants.finished":1,
+                })
+                .match(
+                    {"thisGameParticipants.finished":false}
+                )
+                .count("finished");
+    
+                return aggregationResult.length < 1 ? true : false;
+            } catch (error) {
+                console.log(error)
+            }
+            
+        }
 
 
-    async calculatePlayerResult(userAnwsers ,usernameId, quizName ,timeResult ){
+    async calculatePlayerResult(userAnwsers ,usernameId, quizAndRoomId ,quizName , timeResult ){
 
-        // console.log(`quiz name:${quizName} \n usernameId:${usernameId} \n suppliedAnwsers:${userAnwsers} \n timeResult:${timeResult}`);
+        console.log(`room(quiz(later is better to split quiz and room id)) name:${quizAndRoomId} \n usernameId:${usernameId} \n suppliedAnwsers:${userAnwsers} \n quiz name: ${quizName} \n timeResult:${timeResult}`);
 
         
         const questions = await Quiz.aggregate([
@@ -208,34 +235,33 @@ class SocketHandler  {
             }
         });
 
+        console.log(userAnwsers.anwsers.find((ques)=>ques.questionDesc === 'What is your name?'));
+
+
+
         
         // const correctAnwsered = await calcCorrect(questions , userAnwsers);
 
-        //remake in further
+        let correctAnwsered = 0;
+
         questions.forEach(
             (question) =>{
                 const description = question.questionData.questionDesc;
                 const anwser = question.questionData.anwser;
-                
-                userAnwsers.anwsers.forEach(
-                    (userAnwser)=>{
-                        if(userAnwser.questionDescription === description){
-                           if(userAnwser.anwserGiven === anwser){
-                            correctAnwsered++;
-                           }
-                        }
-                    }
-                )
+                const usrAnwsr = userAnwsers.anwsers.find((ques)=>ques.questionDesc === description);
+                if(usrAnwsr.anwserGiven === anwser) correctAnwsered++;
             }
         )
+
+        console.log(correctAnwsered);
 
         const result = await Participant.findOneAndUpdate({"userId":usernameId} ,
          {$set:{"finished":true , "correctAnwsers":correctAnwsered , "timeResultInSeconds":timeResult}} , {new:true});
 
          console.log(result);
 
-         //fix later
-         return result.correctAnwsers;
+      
+         return correctAnwsered;
 
         
 

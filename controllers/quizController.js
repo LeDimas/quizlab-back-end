@@ -1,4 +1,5 @@
 const {Quiz , Question} = require('../models/Quiz');
+const QuizService = require('../services/QuizService')
 
 class QuizController {
 
@@ -6,24 +7,11 @@ class QuizController {
 
         try {
             const user_id = req.user.id;
-            const quizes = await Quiz.find({author:user_id});
-            
-    
-            const length = quizes.length;
-            
-    
-            if(!quizes)
-                return res.status(500).json({"message":"no such collection"});
-    
-            if(length === 0)
-                return res.status(200).json({"message":"no quizes"});
-                
-            
-            return res.status(200).json(quizes);
-    
+            const quizes = await QuizService.getAllById(user_id)
+            return res.status(200).json(quizes);   
         } catch (e) {
             console.log(e);
-            return res.status(500).json({"error":e});
+            return res.status(400).json({"Error":e});
         }
 
     }
@@ -101,20 +89,11 @@ class QuizController {
 
     async createQuiz(req,res){
         try {
-
-            const {name , description } = req.body;
-            const user_id = req.user.id;
-            
-            const quizToCreate = await Quiz.create({
-                name:name,
-                description:description,
-                author:user_id
-            });
-    
-            
-            return res.status(200).json(quizToCreate);
-    
-    
+            const {quizName , description } = req.body;
+            const user_id = req.user.id;        
+            const quiz = await QuizService.createQuiz(quizName , description , user_id)
+           
+            return res.status(200).json(quiz);
         } catch (error) {
             console.log(error);
             return res.status(500).json({"error":error});
@@ -123,31 +102,12 @@ class QuizController {
 
     async createQuestion(req,res){
         try {
-
             const quizId = req.params.quizId;
-            
             const {alternatives , description } = req.body;
-            
-            const quiz = await Quiz.findById(quizId);
-    
-            if(!quiz)
-            return res.status(400).json({"error":"no quiz with given id found"});
-            
-            //remove quiz id in further
-            const questionObj = {
-                description:description,
-                alternatives:alternatives,
-                quiz:quizId
-            };
-            
-            const question = new Question(questionObj);
-            
-            await quiz.questions.push(question);
-            
-            await quiz.save();
-            
+
+            const quiz = await QuizService.createQuiestion(quizId,alternatives,description )
+
             return res.status(200).json(quiz);
-            
             
         } catch (error) {
             console.log(error);
@@ -157,17 +117,19 @@ class QuizController {
 
     async updateQuestion(req,res){
         try {
+            
             const quizId = req.params.quizId;
-            const questionId = req.params.questionId;
+            // const questionId = req.params.questionId;
     
-            const {description , alternatives} = req.body;
+            const {description , alternatives , oldDescription} = req.body;
     
             const newQuestion = {
                 description:description,
                 alternatives:alternatives
             }
+
     
-            Quiz.findOneAndUpdate({"_id":quizId , "questions._id":questionId} ,
+            Quiz.findOneAndUpdate({"_id":quizId , "questions.description":oldDescription} ,
              {$set: 
                 {"questions.$.description":description , "questions.$.alternatives":alternatives}})
              .then(
@@ -176,12 +138,28 @@ class QuizController {
                     .then(refreshedDoc => res.status(200).json(refreshedDoc))
                     .catch(e => res.status(400).json(e));
                 }
-            ).catch(e => res.status(400).json(e));      
+            ).catch(e => {
+                console.log(e)
+               return res.status(400).json(e)
+            });      
             
             
         } catch (error) {
             console.log(error);
             return res.status(400).json(error);
+        }
+    }
+
+    async getUserQuizes(req,res){
+        try{
+
+        const {id} = req.user
+        const quizes = await QuizService.getUserQuizes(id)
+        return res.json(quizes)
+
+        }catch(e){
+            console.log(e)
+            return res.status(400).json(e)
         }
     }
 

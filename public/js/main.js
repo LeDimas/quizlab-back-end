@@ -14,6 +14,8 @@ let userAnwsers = {anwsers:[
 
 ]};
 
+let playerSubmitted = false;
+
 const timeOutTime = (seconds * 1000) + (minutes * 60 * 1000) + (hours * 60 * 60 * 1000) ; 
 
 let questions ;
@@ -131,6 +133,7 @@ anwser_btn.addEventListener('click' , (e) =>{
 submitBtn.addEventListener('click' , (e)=>{
   const timeResult = endTimer();
   socket.emit('player submit' , ({userAnwsers, usernameId , roomId , quizName , timeResult}))
+  playerSubmitted = true;
 })
 
 
@@ -198,6 +201,14 @@ socket.on('notifyOthersAboutNewConnectedPlayer' , (name)=>{
     
     playerNames.push(name);
     outputUsers(playerNames);
+});
+
+socket.on('quiz points' , (correctAnwsered)=>{
+  console.log('congratulations u have earned ' + correctAnwsered + ' points');
+})
+
+socket.on('result' , (result)=>{
+  console.log('well....');
 })
 
 
@@ -250,9 +261,11 @@ socket.on('retrieveOtherPlayers' , (otherPlayers) =>{
     countDownClock(minutes,'minutes')
     
     setTimeout(() => {
-      socket.emit('player submit' , ({userAnwsers, usernameId , roomId , quizName}))
+      if(!playerSubmitted){
+        socket.emit('player submit' , ({userAnwsers, usernameId , roomId , quizName}))
+      }
 
-      //test later
+ 
       socket.emit('finish' , quizName);
     }, timeOutTime);
   

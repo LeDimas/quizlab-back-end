@@ -1,16 +1,19 @@
 const express = require('express');
 const path = require('path');
+const gameController = require('./controllers/gameController');
 require('dotenv').config();
 const connectToMongoDb = require('./database').connectToMongoDb;
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quiz_question');
 const gameRoutes = require('./routes/game');
+const stripeRoutes = require('./routes/stripe');
 const cors = require('cors');
 const exprshandlebars = require('express-handlebars');
 const socketHandler = require('./controllers/socketHandler');
-
 const http = require('http');
+const cookieParser = require('cookie-parser')
 const socketio = require('socket.io');
+const errorMiddleware = require('./middleware/errorMiddleware')
 
 
 //Initialize express app
@@ -20,14 +23,23 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+app.use(cookieParser())
+app.use(cors({
+    credentials: true,
+    origin: process.env.CLIENT_URL
+}));
 
+app.use('/api/auth' , authRoutes);
+app.use('/api/game' , gameRoutes);
+app.use('/api' , quizRoutes);
+app.use('/api/stripe' , stripeRoutes);
+app.use(errorMiddleware)
 
-app.use(cors());
 
 app.use(express.static(path.join(__dirname,  '/public')));
 
-app.engine('.hbs',exprshandlebars({defaultLayout:__dirname+'/views/layouts','extname':'hbs'}));
-app.set('view engine','.hbs');
 
 
 /**
@@ -76,17 +88,24 @@ io.on('connection', socket => {
     })
 
     
-    socket.on('player submit' , ({userAnwsers, usernameId , roomId , quizName , timeResult})=>{
+    socket.on('player submit' , ({userAnwsers, usernameId , roomId , quizName , timeResult })=>{
 
         socketHandler.calculatePlayerResult(userAnwsers ,usernameId,roomId, quizName ,timeResult  )
             .then(
-                (result) =>{
-                    socket.to(roomId).emit('game results' , result)
+                (correctAnwsered) =>{
+                    socket.emit('quiz points' , correctAnwsered);
+                    
+                    socketHandler.checkWhetherAllFinished(roomId).then((allFinished)=>
+                        {
+                            if(allFinished)
+                                gameController.assignGameResults(roomId).then((result)=>socket.emit('result' , result));
+                        }
+                    )
                 }
             )
     })
     
-    //Last crucial logic to compare results and assign places/results
+    
     socket.on('finish' , ()=>{
 
     })
@@ -110,51 +129,7 @@ io.on('connection', socket => {
 
 
 
-
-
-
-
-
-
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
-
-app.use('/api/auth' , authRoutes);
-app.use('/api/game' , gameRoutes);
-app.use('/api' , quizRoutes);
-
 connectToMongoDb();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const PORT = process.env.PORT;
 

@@ -1,119 +1,82 @@
 const User = require('../models/User');
 const Role = require('../models/Role');
-const bcrypt = require('bcryptjs');
 const {validationResult} = require('express-validator');
-const user = require('../models/User');
 const jwt = require('jsonwebtoken');
-const {secret} = require('../jwt_config');
+const UserService = require('../services/UserService')
+const ApiError = require('../exceptions/apiError')
 
-const generateAccessToken = (id , roles) => {
-
-    const payload ={
-        id,
-        roles
-    }
-
-    return jwt.sign(payload , secret , {expiresIn:"24h"} );
-}
 
 class AuthController{
 
-    getRegistrationView(req,res){
-        res.send('hi from auth controller get registration veiw');
-    }
 
-    async initRoles(req,res){
-
-    }
-
-    async registration(req,res){
+    async registration(req, res , next){
         try {
 
             const errors = validationResult(req);
-            if(!errors.isEmpty()){
-                return res.status(400).json({message:"Registration error" , errors})
-            }
 
-
+            if(!errors.isEmpty()) return next(ApiError.BadRequest('Validation error' , errors.array()))
+            
             const {username , password , email} = req.body;
 
-            const candidate = await User.findOne({username});
+            const userData = await UserService.registration(email , password , username)
 
-            if(candidate){
-                return res.status(400).json({message:"User with this name already exists"});
-            }
-
-            //Store hash as password
-            const hashedPassword = bcrypt.hashSync(password, 7);
-            
-            //TODO make dynamic
-            let userRole = await Role.findOne({value:"User"});
-
-            if(!userRole){
-                userRole = await Role.create({value : "User"});
-            }
-            
-            const user = new User({username: username , password:hashedPassword ,email:email , roles: [userRole.value] });
-
-            await user.save();
-
-            return res.json({message:"User has been succesfully registered"});
-
-
-            
-
+            res.cookie('refreshToken' , userData.refreshToken , {maxAge: 30 * 24 * 60 * 60 * 1000 , httpOnly:true})
+            return res.status(201).json(userData);
             
         } catch (error) {
-            console.log(error);
-            res.status(400).json({message:'Registration error'})
+             next(error)
         }
     }
 
-    getLoginView(req,res){
 
-        res.send('hi from authcontroller get login view');
-
-    }
-
-    async login(req,res){
+    async login(req,res , next){
         try {
-            const {username , password} = req.body;
-
-            const user = await User.findOne({username});
-
-            if(!user){
-                return res.status(400).json({message:`User ${username} is not found`});
-            }
-
-            const validPassword = bcrypt.compareSync(password , user.password);
-
-            if(!validPassword)
-                return res.status(400).json({message:'Incorrect password'})
-            
-
-            const token = generateAccessToken(user._id , user.roles) ;
-
-            return res.json({token});
-
+            const {email , password} = req.body;
+            const userData = await UserService.login(email , password)
+            res.cookie('refreshToken' , userData.refreshToken , {maxAge:30*24*60*60*1000 , httpOnly:true})
+            return res.status(201).json(userData);
         } catch (error) {
-            console.log(error);
-            res.status(400).json({message:'Login error'})
+           next(error)
         }
     }
 
-    getUsersView(req,res){
-        res.send('hi from auth controller get users view');
+
+    async logout (req,res,next){
+        try{
+            const {refreshToken} = req.cookies;
+            const token = await UserService.logout(refreshToken);
+            res.clearCookie('refreshToken')
+            return res.json(token)
+        }catch(e){
+            next(e)
+        }
+    }
+    async refresh (req,res,next){
+        try{
+            const {refreshToken} = req.cookies;
+            const userData = await UserService.refresh(refreshToken)
+            res.cookie('refreshToken' , userData.refreshToken , {maxAge:30*24*60*60*1000 , httpOnly:true})
+            return res.status(201).json(userData);
+        }catch(e){
+            next(e)
+        }
+    }
+    async activate (req,res,next){
+        try{
+            const activationLink = req.params.activationLink
+            await UserService.activate(activationLink);
+            return res.redirect(process.env.CLIENT_URL)
+        }catch(e){
+            next(e)
+        }
     }
 
     async getUsers(req,res){
         try {
-
             const users = await User.find();
-
             res.json(users); 
         } catch (error) {
-            console.log(error);
-            res.status(400).json({message:'User fetch error'})
+            next(error)
         }
     }
 }

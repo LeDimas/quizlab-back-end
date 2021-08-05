@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
-const {secret} = require('../jwt_config');
+require('dotenv').config()
+const ApiError = require('../exceptions/apiError')
+const TokenService = require('../services/TokenService')
 
 module.exports = function (req,res,next){
 
@@ -8,19 +10,24 @@ module.exports = function (req,res,next){
     }
 
     try {
-        const token = req.headers.authorization.split(' ')[1];
 
-        if(!token)
-            return res.status(403).json({message:"User is not authorized"});
+        const authorizationHeader = req.headers.authorization
 
-        const decodedData = jwt.verify(token , secret );
+        if(!authorizationHeader) return next(ApiError.UnauthorizedError())
 
-        req.user = decodedData;
+        const token = authorizationHeader.split(' ')[1];
+
+        if(!token) return next(ApiError.UnauthorizedError())
+
+        const userData = TokenService.validateAccessToken(token)
+
+        if(!userData) return next(ApiError.UnauthorizedError())
+
+        req.user = userData;
 
         next();
 
     } catch (error) {
-        console.log(error);
-        return res.status(403).json({message:"User is not authorized"})
+        return next(ApiError.UnauthorizedError())
     }
 };

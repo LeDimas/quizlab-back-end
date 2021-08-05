@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const controller = require('../controllers/quizController');
 
 
+
 //TODO:: add middleware
 /**
  * надо ограничить поиск для публичных
@@ -25,7 +26,7 @@ router.put('/quiz/:quizId' , authMiddleware , controller.updateQuiz)
 
 
 //TODO ВПАЯТЬ СОКЕТЫ
-router.put('/quiz/:quizId/question/:questionId' , authMiddleware , controller.updateQuestion)
+router.put('/quiz/:quizId/question' , authMiddleware , controller.updateQuestion)
 
 //#endregion
 
@@ -43,6 +44,8 @@ router.put('/quiz/:quizId/question/:questionId' , authMiddleware , controller.up
 router.get('/quiz' ,authMiddleware, controller.getAllQuizes);
 
 router.get('/quiz/:quizId' ,controller.getQuizById);
+
+router.get('/myQuizList' , authMiddleware ,  controller.getUserQuizes)
 
 router.get('/quiz/:quizId/question' ,controller.getAllQuestionsFromQuizById);
 
