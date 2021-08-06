@@ -1,9 +1,10 @@
 const {Quiz , Question} = require('../models/Quiz');
 const QuizService = require('../services/QuizService')
+const QuestionService = require('../services/QuestionService')
 
 class QuizController {
 
-    async getAllQuizes(req , res){
+    async getAllQuizes(req , res , next){
 
         try {
             const user_id = req.user.id;
@@ -11,59 +12,39 @@ class QuizController {
             return res.status(200).json(quizes);   
         } catch (e) {
             console.log(e);
-            return res.status(400).json({"Error":e});
+            next(e)
         }
 
     }
 
-
-    async getQuizById(req , res){
+    async getQuizById(req , res , next){
         try {
-
             const quizId = req.params.quizId;
-            
-            const quiz = await Quiz.findById(quizId).populate('Question');
-            
+            const quiz = await QuizService.getById(quizId)
             return res.status(200).json(quiz);
-            
         } catch (e) {
-            return res.status(500).json({"error":e});
+           next(e)
         }
     }
 
-    async getAllQuestionsFromQuizById(req,res){
+    async getAllQuestionsFromQuizById(req,res ,next){
         try {
             const quizId = req.params.quizId;
-    
-            const quiz = await Quiz.findById(quizId);
-    
-            if(!quiz)
-                return res.status(404).json({message:`question with id ${_id} is not found`});
-    
-            const questions = quiz.questions;
-    
+            const questions = await QuestionService.getAllById(quizId)
             return res.status(200).json(questions);
-    
         } catch (err) {
-            return res.status(500).json({"error":err});
+            next(err)
         }
     }
 
-    async getQuestionFromQuizById(req,res){
+    async getQuestionFromQuizById(req,res , next){
         try {
-            const questionId = req.params.questionId;
-            
-            const quizId = req.params.quizId;
-    
-            const quiz = await Quiz.findById(quizId);
-    
-            const concreteQuestion = await quiz.questions.id(questionId);
-    
-            return res.status(200).json(concreteQuestion);
-    
+            const {questionId,quizId} = req.params;
+            const question = await QuestionService.getById(quizId , questionId)
+            return res.status(200).json(question);
         } catch (error) {
             console.log(error);
-            return res.status(500).json({"error":error});
+            next(error)
         }
     }
 
@@ -71,15 +52,10 @@ class QuizController {
         try {
             const quizId = req.params.quizId;
             const updateOps = {};
-            for(const ops of req.body){
-                updateOps[ops.propName] = ops.value;
-            }
-        
-            Quiz.findByIdAndUpdate(quizId , {$set: updateOps} )
-            .exec()
-            .then(quiz =>{return res.status(200).json(quiz);})
-            .catch(e => console.log(e));
-        
+            for(const ops of req.body)  updateOps[ops.propName] = ops.value;
+            
+            const quiz = await QuizService.update(quizId , updateOps)
+            return res.status(200).json(quiz)  
             
         } catch (error) {
             console.log(error);
@@ -91,8 +67,7 @@ class QuizController {
         try {
             const {quizName , description } = req.body;
             const user_id = req.user.id;        
-            const quiz = await QuizService.createQuiz(quizName , description , user_id)
-           
+            const quiz = await QuizService.create(quizName , description , user_id)
             return res.status(200).json(quiz);
         } catch (error) {
             console.log(error);
@@ -100,18 +75,15 @@ class QuizController {
         }
     }
 
-    async createQuestion(req,res){
+    async createQuestion(req,res , next){
         try {
             const quizId = req.params.quizId;
             const {alternatives , description } = req.body;
-
-            const quiz = await QuizService.createQuiestion(quizId,alternatives,description )
-
+            const quiz = await QuestionService.create(quizId,alternatives,description )
             return res.status(200).json(quiz);
-            
         } catch (error) {
             console.log(error);
-            return res.status(400).json({"error":error});
+            next(error)
         }
     }
 
@@ -119,30 +91,9 @@ class QuizController {
         try {
             
             const quizId = req.params.quizId;
-            // const questionId = req.params.questionId;
-    
             const {description , alternatives , oldDescription} = req.body;
-    
-            const newQuestion = {
-                description:description,
-                alternatives:alternatives
-            }
-
-    
-            Quiz.findOneAndUpdate({"_id":quizId , "questions.description":oldDescription} ,
-             {$set: 
-                {"questions.$.description":description , "questions.$.alternatives":alternatives}})
-             .then(
-                doc => {
-                    doc.save()
-                    .then(refreshedDoc => res.status(200).json(refreshedDoc))
-                    .catch(e => res.status(400).json(e));
-                }
-            ).catch(e => {
-                console.log(e)
-               return res.status(400).json(e)
-            });      
-            
+            const updatedQuiz = await QuestionService.update(quizId , description,alternatives , oldDescription)
+            return res.status(200).json(updatedQuiz)
             
         } catch (error) {
             console.log(error);
@@ -166,40 +117,22 @@ class QuizController {
     async removeQuizById(req,res){
         try {
             const quizId = req.params.quizId;
-    
-            const quiz = await Quiz.findByIdAndDelete(quizId);
-    
-            if(quiz.deletedCount === 0)
-                return res.status(404).json({"message":"Could not delete because nothing was deleted"});
-           
-    
-            return res.status(204).json({"message":"Succesfully deleted"});
+            const response = await QuizService.removeById(quizId)
+            return res.status(204).json({"message":response});
         } catch (error) {
-    
-            
             console.log(error);
             return res.status(500).json({"error":error});
         }
     }
 
-    async removeQuestionFromQuizById(req,res){
+    async removeQuestionFromQuizById(req,res , next){
         try {
-            const quizId = req.params.quizId;
-            const questionId = req.params.questionId;
-    
-            const quiz = await Quiz.findById(quizId);
-    
-            await quiz.questions.pull(questionId);
-    
-            await quiz.save();       
-                
+            const {quizId,questionId} = req.params;
+            await QuestionService.removeById(quizId);
             return res.status(204).json({"message":"Succesfully deleted question"});
     
         } catch (error) {
-    
-            
-            console.log(error);
-            return res.status(500).json({"error":error});
+            next(error)
         }
     }
 

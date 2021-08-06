@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const gameController = require('./controllers/gameController');
 require('dotenv').config();
 const connectToMongoDb = require('./database').connectToMongoDb;
 const authRoutes = require('./routes/auth');
@@ -8,10 +7,9 @@ const quizRoutes = require('./routes/quiz_question');
 const gameRoutes = require('./routes/game');
 const stripeRoutes = require('./routes/stripe');
 const cors = require('cors');
-const exprshandlebars = require('express-handlebars');
-const socketHandler = require('./controllers/socketHandler');
 const http = require('http');
 const cookieParser = require('cookie-parser')
+const SocketService = require('./services/SocketService')
 const socketio = require('socket.io');
 const errorMiddleware = require('./middleware/errorMiddleware')
 
@@ -42,91 +40,10 @@ app.use(express.static(path.join(__dirname,  '/public')));
 
 
 
-/**
- * поиграться и поковыряться с сокетами
- */
-io.on('connection', socket => {
-   
-
-    socket.on('joinQuizRoom', ({usernameId , roomId})=>{
-
-
-        socketHandler.registerNewParticipant( usernameId , roomId ,socket.id ,socket);
-       
-        socket.join(roomId);
-
-        socketHandler.getNewParticipantName(usernameId).then(
-            (name) => {
-                //Including the connected user by itself
-                io.in(roomId).emit('notifyOthersAboutNewConnectedPlayer' , name );
-            }
-        )
-
-    //проверить на разных комнатах(хотя механика не должна позволять больше одной комнаты так что мб и похуй)
-      socketHandler.getQuizPlayers(roomId).then( 
-        otherPlayers => socket.emit('retrieveOtherPlayers' ,otherPlayers)
-        );
-
-    })
-
-
-
-    socket.on('admin pressed countdown' , ({roomId , quizName}) => {
-        io.in(roomId).emit('begin countdown');
-    })
-
-    socket.on('request questions' , ({roomId , quizName})=>{
-        socketHandler.getQuestions(quizName).then(
-            (questions) =>{
-                socket.broadcast.in(roomId).emit('question supply' , questions);
-            }
-        )
-    })
-
-    socket.on('too late' , () =>{
-        //do something to reject user attempt to access quiz
-    })
-
-    
-    socket.on('player submit' , ({userAnwsers, usernameId , roomId , quizName , timeResult })=>{
-
-        socketHandler.calculatePlayerResult(userAnwsers ,usernameId,roomId, quizName ,timeResult  )
-            .then(
-                (correctAnwsered) =>{
-                    socket.emit('quiz points' , correctAnwsered);
-                    
-                    socketHandler.checkWhetherAllFinished(roomId).then((allFinished)=>
-                        {
-                            if(allFinished)
-                                gameController.assignGameResults(roomId).then((result)=>socket.emit('result' , result));
-                        }
-                    )
-                }
-            )
-    })
-    
-    
-    socket.on('finish' , ()=>{
-
-    })
-
-    
- 
-
-    socket.on('disconnect', () => {
-        socketHandler.playerLeft(socket.id).then(
-            (usernameRoom) =>{
-                io.to(usernameRoom.gameId).emit('player left' , usernameRoom.name)
-            }
-        )
-    })
-
-    
+ io.on('connection', socket => {
+    const { roomId } = socket.handshake.query
+    const socketService = new SocketService(roomId , socket)
   });
-
-
-
-
 
 
 connectToMongoDb();
@@ -143,3 +60,83 @@ const start = () => {
 
 start();
 
+
+
+
+//#region legacy socket
+// socket.on('joinQuizRoom', ({usernameId , roomId , username})=>{
+
+//     socketHandler.registerNewParticipant( usernameId , roomId , socket);
+
+//     socket.broadcast.to(roomId).emit('notifyOthersAboutNewConnectedPlayer', username.userName );
+//     // io.in(roomId).emit('notifyOthersAboutNewConnectedPlayer' , username.userName );
+
+//   socketHandler.getQuizPlayers(roomId).then( 
+//     otherPlayers => socket.emit('retrieveOtherPlayers' ,otherPlayers)
+//     );
+
+// })
+
+
+// socket.on('admin pressed countdown' , ({roomId}) => {
+
+//     io.in(roomId).emit('begin countdown');
+// })
+
+// socket.on('request questions' , ({roomId , quizName})=>{
+//      socketHandler.getQuestions(quizName).then(
+//         (questions) =>{
+//             io.in(roomId).emit('question supply' , questions);
+//         }
+//     )
+// })
+
+// socket.on('too late' , () =>{
+//     //do something to reject user attempt to access quiz
+// })
+
+// socket.on('getPlace' , ({username}) =>{
+//     console.log('GETING PKLACE')
+//     socketHandler.getPlace(username).then((place)=>socket.emit('returnPlace' , place))
+// })
+
+
+// socket.on('player submit' , ({userAnwsers, usernameId , roomId , quizName , timeResult })=>{
+
+//     socketHandler.calculatePlayerResult(userAnwsers ,usernameId,roomId, quizName ,timeResult  )
+//         .then(
+//             (correctAnwsered) =>{
+//                 socket.emit('quiz points' , correctAnwsered);
+                
+//                 socketHandler.checkWhetherAllFinished(roomId).then((allFinished)=>
+//                     {
+//                         if(allFinished){
+                          
+//                             gameController.assignGameResults(roomId).then((result)=>{
+//                                 io.in(roomId).emit('result' , result)});
+//                         }
+//                     }
+//                 )
+//             }
+//         )
+// })
+
+
+// socket.on('finish' , ()=>{
+
+// })
+
+
+
+
+// socket.on('disconnect', () => {
+
+//     console.log('bye')
+
+//     // socketHandler.playerLeft(socket.id).then(
+//     //     (usernameRoom) =>{
+//     //         io.to(usernameRoom.gameId).emit('player left' , usernameRoom.name)
+//     //     }
+//     // )
+// })
+//#endregion
